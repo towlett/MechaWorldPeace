@@ -1,4 +1,17 @@
-// Written for #8 Ultra Magnus
+/**************************************************************
+  File:     Cockroach_SM.ino
+  Contents: This program simulates a cockroach using a state 
+            machine. The Cockroach scurries in the light, stops
+            in the dark, and reverses if it his something. 
+  Notes:    Target: Arduino Uno R1 & R2
+            Arduino IDE version: 1.0.6 & 1.5.8 BETA
+
+  History:
+  when      who  what/why
+  ----      ---  -------------------------------------------
+  01/25/15  TMO  program written
+  
+**************************************************************/
 
 /*---------------- Includes ---------------------------------*/
 #include <Roachlib.h>
@@ -9,14 +22,13 @@
 #define LO_LIGHT_THRESHOLD    100
 #define ONE_SEC            1000
 #define TIME_INTERVAL      ONE_SEC
-#define HEARTBEAT_LED      13
 #define BACKUPTIME         ONE_SEC
 #define FORWARD            1
 #define BACKWARD           2
 #define STOP               3
 
 /*----------------Module Variables --------------------------*/
-static unsigned char state = FORWARD; // Global variable for the state 
+static unsigned char state = FORWARD;
 
 /*---------------- Module Function Prototypes ---------------*/
 unsigned char TestForLightOn(void);
@@ -66,6 +78,8 @@ void loop() {
   }
 }
 
+/*------------- Module Functions -------------------------*/
+
 unsigned char TestBackupExpired(void) {
   return (TMRArd_IsTimerExpired(2) == TMRArd_EXPIRED);
 }
@@ -79,7 +93,6 @@ unsigned char TestForLightOn(void) {
 }
 
 void RespToLightOn(void) {
-  Serial.println("  ON");
    LeftMtrSpeed(10);
    RightMtrSpeed(10);
   state = FORWARD;
@@ -94,7 +107,6 @@ unsigned char TestForLightOff(void) {
 }
 
 void RespToLightOff(void) {
-  Serial.println("  OFF");
   LeftMtrSpeed(0);
   RightMtrSpeed(0);
 }
@@ -114,6 +126,7 @@ unsigned char TestForBump(void) {
 
 void RespToBump(void) {
   TMRArd_InitTimer(2, BACKUPTIME);
+  
   unsigned char bumper;
   bumper = GET_SHARED_BYTE();
   
