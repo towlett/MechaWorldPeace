@@ -66,13 +66,12 @@ void loop() {
       break;
     case(BACKWARD):
       if (TestBackupExpired()) {
-        if (TestForLightOn()) {
-          RespToLightOn();
-          state = FORWARD;
-        } else {
-          RespToLightOff();
-          state = STOP;
-        }
+        RespToLightOn();
+        state = FORWARD;
+      }
+      if (TestForLightOff()) {
+        RespToLightOff();
+        state = STOP;
       }
       break;  
   }
