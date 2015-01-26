@@ -1,225 +1,124 @@
 /**************************************************************
-  File:      RoachProof.ino
-  Contents:  This program demonstrates the use of the software
-              library for interfacing withe the ME210 Cockroach
-              Roachlib.cpp and the Timer.cpp library.  The demo
-              is implemented using the Events and Services
-              framework. 
+  File:     Lab2Part1.ino
+  Contents: This program explores the provided library functions.
+            The program gets characters from the keyboard to 
+            control the motors, print values from the serial
+            monitor, read the light sensor, and test the bumper
+            switches.
   Notes:    Target: Arduino Uno R1 & R2
             Arduino IDE version: 1.0.6 & 1.5.8 BETA
 
   History:
   when      who  what/why
   ----      ---  -------------------------------------------
-  01/21/12  RMO  program created
-  01/29/12  RNO  fixed bug in TestForLightOff and TestForLightOn
-                  with data types (changed char to int for returns
-                  from LightLevel() function).
-  20150119  KLG  simplified TestForLightOff and TestForLightOn
+  01/23/15  TMO  program created
 **************************************************************/
 
 /*---------------- Includes ---------------------------------*/
 #include <Roachlib.h>
 #include <Timers.h>
 
-/*---------------- Module Defines ---------------------------*/
-#define LIGHT_THRESHOLD    125
-#define ONE_SEC            1000
-#define TIME_INTERVAL      ONE_SEC
-#define HEARTBEAT_LED      13
-#define BACKUPTIME         1000
-
 /*---------------- Module Function Prototypes ---------------*/
 unsigned char TestForKey(void);
 void RespToKey(void);
-unsigned char TestForLightOn(void);
-void RespToLightOn(void);
-unsigned char TestForLightOff(void);
-void RespToLightOff(void);
-unsigned char TestForBump(void);
-void RespToBump(void);
-unsigned char TestTimerExpired(void);
-void RespTimerExpired(void);
-unsigned char TestBackupExpired(void);
-void RespBackupExpired(void);
+void GoForward(void);
+void GoBackward(void);
+void GoRight(void);
+void GoLeft(void);
+void StopMotors(void);
+void PrintLight(void);
+void KeyErr(void);
+void BumpTest(void);
 
 /*---------------- Arduino Main Functions -------------------*/
 void setup() {  // setup() function required for Arduino
   Serial.begin(9600);
-  Serial.println("Starting RoachProof...");
+  Serial.println("Hello world!");
   RoachInit();
-  TMRArd_InitTimer(0, TIME_INTERVAL);
 }
 
 void loop() {  // loop() function required for Arduino
   if (TestForKey()) RespToKey();
-  if (TestForLightOn()) RespToLightOn();
-  if (TestForLightOff()) RespToLightOff();
-  if (TestForBump()) RespToBump();
-  if (TestTimerExpired()) RespTimerExpired();
-  if (TMRArd_IsTimerExpired(2) == TMRArd_EXPIRED) RespBackupExpired();
 }
 
 /*---------------- Module Functions -------------------------*/
+
+
 unsigned char TestForKey(void) {
   unsigned char KeyEventOccurred;
-  
   KeyEventOccurred = Serial.available();
   return KeyEventOccurred;
 }
 
+/*------- Function that gets character from keyboard -------*/
 void RespToKey(void) {
   unsigned char theKey;
-  
   theKey = Serial.read();
   
-  Serial.print(theKey);
-  Serial.print(", ASCII=");
-  Serial.println(theKey,HEX);
-  
   if(theKey == 'w') {
-    LeftMtrSpeed(10);
-    RightMtrSpeed(10);
+    GoForward();
   } else if (theKey == 's') {
-    LeftMtrSpeed(-10);
-    RightMtrSpeed(-10);
+    GoBackward();
   } else if (theKey == 'd') {
-    LeftMtrSpeed(10);
-    RightMtrSpeed(-10);
+    GoRight();
   } else if (theKey == 'a') {
-    LeftMtrSpeed(-10);
-    RightMtrSpeed(10);
+    GoLeft();
   } else if (theKey == 'x') {
-    LeftMtrSpeed(0);
-    RightMtrSpeed(0);
-  } 
+    StopMotors();
+  } else if (theKey == 'l') {
+    PrintLight();
+  } else if (theKey == 'b') {
+    TestBump();
+  } else {
+    KeyErr();
+  }
 }
 
-unsigned char TestForLightOn(void) {
-  char EventOccurred;
-  unsigned int ThisLight;
-  static unsigned int LastLight = 0;
-  
-  ThisLight = LightLevel();
-  EventOccurred = ((ThisLight >= LIGHT_THRESHOLD)
-                       && (LastLight < LIGHT_THRESHOLD));
-
-  LastLight = ThisLight;
-  return EventOccurred;
-}
-
-void RespToLightOn(void) {
-  Serial.println("  ON");
+/* ------- Functions that explore motor control -------------*/
+void GoForward(void) {
   LeftMtrSpeed(10);
   RightMtrSpeed(10);
 }
 
-unsigned char TestForLightOff(void) {
-  char EventOccurred;
-  unsigned int ThisLight;
-  static unsigned int LastLight = 0;
-
-  ThisLight = LightLevel();
-  EventOccurred = ((ThisLight < LIGHT_THRESHOLD)
-                       && (LastLight >= LIGHT_THRESHOLD));
-
-  LastLight = ThisLight;
-  return EventOccurred;
+void GoBackward(void) {
+  LeftMtrSpeed(-10);
+  RightMtrSpeed(-10);
 }
 
-void RespToLightOff(void) {
-  Serial.println("  OFF");
+void GoLeft(void) {
+  LeftMtrSpeed(-10);
+  RightMtrSpeed(10);
+}
+
+void GoRight(void) {
+  LeftMtrSpeed(10);
+  RightMtrSpeed(-10);
+}
+
+void StopMotors(void) {
   LeftMtrSpeed(0);
   RightMtrSpeed(0);
 }
 
-unsigned char TestForBump(void) {
-  static unsigned char LastBumper = 0xF0;
-  unsigned char bumper;
-  unsigned char EventOccurred;
-  
-  bumper = ReadBumpers();
-  EventOccurred = ((bumper != 0xF0) && (bumper != LastBumper));
-  if (EventOccurred) {
-    SET_SHARED_BYTE_TO(bumper);
-    LastBumper = bumper;
+/*----- Function that reads the light sensor --------------*/
+void PrintLight(void) {
+  unsigned int Light = LightLevel();
+  Serial.print("Light level is ");
+  Serial.println(Light);
+}
+
+/*-------- Error if key was not specified above -----------*/
+void KeyErr(void) {
+  Serial.println("Invalid key. Try Again");
+}
+
+/*----------------- Test Bumper Switches ------------------*/
+void TestBump(void) {
+  unsigned char bumper = ReadBumpers();
+  if (bumper == 0xF0) {
+    Serial.println("No bumpers hit");
+  } else {
+    Serial.print("Bumper output: ");
+    Serial.println(bumper,HEX);
   }
-  return EventOccurred;
-}
-
-void RespToBump(void) {
-    unsigned char bumper;
-
-    bumper = GET_SHARED_BYTE();
-
-    // display which bumper(s) were hit
-    switch (bumper) {
-        case (0xD0):  Serial.println("  Front Right..."); 
-          LeftMtrSpeed(-10);
-          RightMtrSpeed(0);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-        case (0xE0):  Serial.println("  Front Left...");
-          LeftMtrSpeed(0);
-          RightMtrSpeed(-10);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-        case (0x70):  Serial.println("  Back Left..."); 
-          LeftMtrSpeed(10);
-          RightMtrSpeed(0);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-        case (0xB0):  Serial.println("  Back Right..."); 
-          LeftMtrSpeed(0);
-          RightMtrSpeed(10);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-
-        case (0xC0):  Serial.println("  Both Front ...");
-          LeftMtrSpeed(-10);
-          RightMtrSpeed(0);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-        case (0x30):  Serial.println("  Both Back...");
-          LeftMtrSpeed(10);
-          RightMtrSpeed(0);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-        case (0x90):  Serial.println("  Both Right...");
-          LeftMtrSpeed(-10);
-          RightMtrSpeed(0);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-        case (0x60):  Serial.println("  Both Left...");
-          LeftMtrSpeed(0);
-          RightMtrSpeed(-10);
-          TMRArd_InitTimer(2, BACKUPTIME);
-          break;
-
-		// should never get here unless borked
-        default:      Serial.print("  What is this I don�t even->");
-                      Serial.println(bumper,HEX);
-    }
-}
-
-unsigned char TestTimerExpired(void) {
-  return (unsigned char)TMRArd_IsTimerExpired(0);
-}
-
-void RespTimerExpired(void) {
-  static int Time = 0;
-
-  TMRArd_InitTimer(0, TIME_INTERVAL);
-
-  Serial.print(" time:");
-  Serial.print(++Time);
-  Serial.print(" light:");
-  Serial.println(LightLevel(),DEC);
-}
-
-void RespBackupExpired(void) {
-  Serial.println("Backup Timer Expired");
-  LeftMtrSpeed(0);
-  RightMtrSpeed(0);
-  TMRArd_ClearTimerExpired(2);
 }
