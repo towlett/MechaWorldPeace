@@ -1,3 +1,4 @@
+
 /**************************************************************
   File:      panda3.ino
   Contents:  A boss ass state machine
@@ -49,12 +50,21 @@
 #define SHOOTER_TIMER 0
 #define SHOT_CLOCK_TIMER 1
 
+//LEDs
+#define redled1            A0        // NEW added code
+#define blueled            A1
+#define redled2            A2
+#define whiteled           A3
+#define redled3            A4
+
 //TIMERS
 #define minturntimer        0
 #define maxturntimer        1
 #define pingtimer           2
 #define SHOOTER_TIMER       3
 #define SHOT_CLOCK_TIMER    4
+#define WHITE_LED_TIMER     5
+#define BLUE_LED_TIMER      6
 
 /*---------------- Module Variables --------------------------*/
 //STATES
@@ -100,6 +110,9 @@ NewPing right_ping(trigPinright, echoPinright, 150);
 unsigned int ultrasonicPing_left(void);
 unsigned int ultrasonicPing_right(void);
 
+// LEDs
+void ScanningLED(void);
+
 /*---------------- Arduino Main Functions -------------------*/
 
 void setup() {  // setup() function required for Arduino 
@@ -109,10 +122,21 @@ void setup() {  // setup() function required for Arduino
   analogWrite(enable_pin_right, 0);
   analogWrite(enable_pin_left, 0);
   
+  // Ultrasonic SETUP
   pinMode(trigPinright, OUTPUT);
   pinMode(echoPinright, INPUT);
   pinMode(trigPinleft, OUTPUT);
   pinMode(echoPinleft, INPUT);
+  
+  // LED SETUP
+  pinMode(redled1, OUTPUT);
+  pinMode(blueled, OUTPUT);
+  pinMode(redled2, OUTPUT);
+  pinMode(whiteled, OUTPUT);
+  pinMode(redled3, OUTPUT);
+  
+  digitalWrite(whiteled, 0);
+  digitalWrite(blueled, 0);
   
   drive_forward();
   pinMode(Beacon_Pin, INPUT);
@@ -162,7 +186,9 @@ static unsigned int distanceright;
         state = shooting;
         TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);        
       }
+      ScanningLED();
       break;
+      
     case(shooting):
       if (ShotClockExp()) {
         RespShotClock();
@@ -422,6 +448,29 @@ void ChangeShooterPos(void) {
   if (pos > 0) {
     TMRArd_InitTimer(SHOOTER_TIMER, SHOOTER_DELAY);
   } 
+}
+
+void ScanningLED(void) {
+    unsigned int blinktime = 500;
+    
+    if(digitalRead(blueled) == LOW && digitalRead(whiteled) == LOW){
+    TMRArd_InitTimer(BLUE_LED_TIMER, blinktime);
+    digitalWrite(blueled, HIGH); 
+    }
+    
+    if(TMRArd_IsTimerExpired(BLUE_LED_TIMER)  == TMRArd_EXPIRED){
+       TMRArd_InitTimer(WHITE_LED_TIMER, blinktime);
+       TMRArd_ClearTimerExpired(BLUE_LED_TIMER);
+       digitalWrite(whiteled, HIGH);
+       digitalWrite(blueled, LOW);
+    }
+    
+     if(TMRArd_IsTimerExpired(WHITE_LED_TIMER)  == TMRArd_EXPIRED){
+       TMRArd_InitTimer(BLUE_LED_TIMER, blinktime);
+       TMRArd_ClearTimerExpired(WHITE_LED_TIMER);
+       digitalWrite(blueled, HIGH);
+       digitalWrite(whiteled, LOW);
+    }
 }
 
 
