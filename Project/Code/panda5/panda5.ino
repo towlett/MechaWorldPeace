@@ -32,8 +32,8 @@
 #define Beacon_Pin          9
 
 //ULTRASOUND
-#define trigPinleft         10
-#define echoPinleft         11
+#define trigPinleft         2
+#define echoPinleft         4
 #define trigPinright        12
 #define echoPinright        13
 #define last_ping_right     0

@@ -26,12 +26,12 @@ void setup()
 {
   shooter.attach(9);
   shooter.write(0);
-  TMRArd_InitTimer(SHOOTER_TIMER, SHOOTER_DELAY);
+  TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
 }
 
 void loop()
 {
-  if (ShotClockEpired()) {
+  if (ShotClockExp()) {
     RespShotClock();
   }
   if (ShooterTimerExp()) {
@@ -57,6 +57,7 @@ void RespShotClock(void) {
 void ChangeShooterPos(void) {
   static int pos = 0;
   static unsigned char dir = 0;
+  TMRArd_ClearTimerExpired(SHOOTER_TIMER);
   
   if (dir == 0) {
     pos += SHOOTER_STEP;
