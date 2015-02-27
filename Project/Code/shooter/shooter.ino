@@ -12,6 +12,7 @@
 #define SHOOTER_DELAY 10 
 #define SHOOTER_TIMER 0
 #define SHOT_CLOCK_TIMER 1
+#define servopin      10
 
 /*----------------Module Objects ----------------------------*/
 Servo shooter;
@@ -24,7 +25,7 @@ void RespShotClock(void);
 
 void setup()
 {
-  shooter.attach(9);
+  shooter.attach(servopin);
   shooter.write(0);
   TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
 }

@@ -65,6 +65,7 @@
 #define SHOT_CLOCK_TIMER    4
 #define WHITE_LED_TIMER     5
 #define BLUE_LED_TIMER      6
+#define RED_LED_TIMER       7
 
 /*---------------- Module Variables --------------------------*/
 //STATES
@@ -110,8 +111,13 @@ NewPing right_ping(trigPinright, echoPinright, 150);
 unsigned int ultrasonicPing_left(void);
 unsigned int ultrasonicPing_right(void);
 
+//IR Finding
+void FindIR(void);
+
 // LEDs
 void ScanningLED(void);
+unsigned char LockedOnLED(void);
+void OffLED(void);
 
 /*---------------- Arduino Main Functions -------------------*/
 
@@ -134,9 +140,11 @@ void setup() {  // setup() function required for Arduino
   pinMode(redled2, OUTPUT);
   pinMode(whiteled, OUTPUT);
   pinMode(redled3, OUTPUT);
-  
-  digitalWrite(whiteled, 0);
-  digitalWrite(blueled, 0);
+  digitalWrite(redled1, LOW);
+  digitalWrite(blueled, LOW);
+  digitalWrite(redled2, LOW);
+  digitalWrite(blueled, LOW);
+  digitalWrite(redled3, LOW);
   
   drive_forward();
   pinMode(Beacon_Pin, INPUT);
@@ -150,12 +158,13 @@ void setup() {  // setup() function required for Arduino
 
 
 void loop() {
-static unsigned int distanceleft;
-static unsigned int distanceright;
+//static unsigned int distanceleft;
+//static unsigned int distanceright;
   
   switch(state) {
     case(drivingbackwall):
       drive_back_wall();
+      LockedOnLED();
       break;
       
     case(findingsidewall):
@@ -167,35 +176,21 @@ static unsigned int distanceright;
       break;
       
     case(findIR):
-      period_high = pulseIn(Beacon_Pin, HIGH);
-      period_low = pulseIn(Beacon_Pin, LOW);
-      Serial.print(period_high);
-      Serial.println(" ");
-      Serial.println(period_low);
-      period_total = period_high + period_low;
-      pulse_freq = 1000000/period_total;
-      if (pulse_freq>750 && pulse_freq<950) {
-	  count++;
-        Serial.println(count);
-      }
-      else  {
-        count = 0;
-      }
-      if (count>5) { //will return true once it has registered 5 consecutive highs
-        drive_stop();
-        state = shooting;
-        TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);        
-      }
       ScanningLED();
+      FindIR();
       break;
       
     case(shooting):
+      if(LockedOnLED() < 5){
+        LockedOnLED; 
+      }
       if (ShotClockExp()) {
         RespShotClock();
       }
       if (ShooterTimerExp()) {
         ChangeShooterPos();
-      }   
+      }
+     break;   
   }
 }
 
@@ -208,8 +203,8 @@ unsigned int ultrasonicPing_right(void) {
   if (distanceright == 0) {
     distanceright = 150;
   }
-  Serial.print("right");
-  Serial.println(distanceright);
+  //Serial.print("right");
+  //Serial.println(distanceright);
   return distanceright;
 }
 
@@ -218,8 +213,8 @@ unsigned int ultrasonicPing_left(void) {
   if (distanceleft == 0) {
     distanceleft = 150;
   }
-  Serial.print("left");
-  Serial.println(distanceleft);
+  //Serial.print("left");
+  //Serial.println(distanceleft);
   return distanceleft;
 }
 
@@ -451,11 +446,11 @@ void ChangeShooterPos(void) {
 }
 
 void ScanningLED(void) {
-    unsigned int blinktime = 500;
+    unsigned int blinktime = 300;
     
     if(digitalRead(blueled) == LOW && digitalRead(whiteled) == LOW){
-    TMRArd_InitTimer(BLUE_LED_TIMER, blinktime);
-    digitalWrite(blueled, HIGH); 
+      TMRArd_InitTimer(BLUE_LED_TIMER, blinktime);
+      digitalWrite(blueled, HIGH); 
     }
     
     if(TMRArd_IsTimerExpired(BLUE_LED_TIMER)  == TMRArd_EXPIRED){
@@ -472,5 +467,67 @@ void ScanningLED(void) {
        digitalWrite(whiteled, LOW);
     }
 }
+
+unsigned char LockedOnLED(void) {
+    static unsigned char ledcyclecount = 0; // number of flashes for LockedOnLED function
+
+    unsigned int blinktime = 175;
+    
+    if(digitalRead(redled1) == LOW && digitalRead(redled2) == LOW && digitalRead(redled3) == LOW && ledcyclecount == 0) {
+      TMRArd_InitTimer(RED_LED_TIMER, blinktime);
+      digitalWrite(redled1, HIGH); 
+      digitalWrite(redled2, HIGH); 
+      digitalWrite(redled3, HIGH); 
+      ledcyclecount += 1;
+    }
+    
+    if(TMRArd_IsTimerExpired(RED_LED_TIMER)  == TMRArd_EXPIRED && digitalRead(redled1) == HIGH){
+       TMRArd_ClearTimerExpired(RED_LED_TIMER);
+       digitalWrite(redled1, LOW); 
+       digitalWrite(redled2, LOW); 
+       digitalWrite(redled3, LOW); 
+       TMRArd_InitTimer(RED_LED_TIMER, blinktime);
+       ledcyclecount += 1;
+    }
+    
+    if(TMRArd_IsTimerExpired(RED_LED_TIMER)  == TMRArd_EXPIRED && digitalRead(redled1) == LOW){
+       TMRArd_ClearTimerExpired(RED_LED_TIMER);
+       digitalWrite(redled1, HIGH); 
+       digitalWrite(redled2, HIGH); 
+       digitalWrite(redled3, HIGH); 
+       TMRArd_InitTimer(RED_LED_TIMER, blinktime);
+       ledcyclecount += 1;
+    }
+    
+    return ledcyclecount;
+}
+
+void OffLED(void){
+    digitalWrite(redled1, LOW);
+    digitalWrite(blueled, LOW);
+    digitalWrite(redled2, LOW);
+    digitalWrite(blueled, LOW);
+    digitalWrite(redled3, LOW);
+}
+
+void FindIR(void) {
+  period_high = pulseIn(Beacon_Pin, HIGH);
+  period_low = pulseIn(Beacon_Pin, LOW);
+  period_total = period_high + period_low;
+  pulse_freq = 1000000/period_total;
+  if (pulse_freq>750 && pulse_freq<950) {
+	  count++;
+  }
+  else  {
+    count = 0;
+  }
+  if (count>5) { //will return true once it has registered 5 consecutive highs
+    drive_stop();
+    TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
+    OffLED();
+    state = shooting;       
+  }
+}
+  
 
 
