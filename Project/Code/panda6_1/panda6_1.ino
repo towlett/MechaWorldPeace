@@ -49,6 +49,8 @@
 #define SHOOTER_DELAY 10 
 #define SHOOTER_TIMER 0
 #define SHOT_CLOCK_TIMER 1
+#define b_press_pin        3
+
 
 //LEDs
 #define redled1            A0        // NEW added code
@@ -82,6 +84,7 @@ static unsigned int period_high;
 static unsigned int period_low;
 
 Servo shooter;
+Servo presser;
 
 /*---------------- Module Function Prototypes ---------------*/
 //MOTORS
@@ -528,6 +531,8 @@ void FindIR(void) {
     state = shooting;       
   }
 }
+
+
   
 
 
