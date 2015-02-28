@@ -24,6 +24,7 @@
 #define drivingsidewall     3
 #define findIR              4
 #define shooting            5
+#define game_over           6
 
 //MOTORS
 #define enable_pin_right    5
@@ -68,6 +69,8 @@
 #define WHITE_LED_TIMER     5
 #define BLUE_LED_TIMER      6
 #define RED_LED_TIMER       7
+#define MAX_SEARCH_TIMER    8
+#define GAME_TIMER          9
 
 /*---------------- Module Variables --------------------------*/
 //STATES
@@ -116,11 +119,14 @@ unsigned int ultrasonicPing_right(void);
 
 //IR Finding
 void FindIR(void);
+void spin_reverse(void);
 
 // LEDs
 void ScanningLED(void);
 unsigned char LockedOnLED(void);
 void OffLED(void);
+
+void game_timer(void);
 
 /*---------------- Arduino Main Functions -------------------*/
 
@@ -157,6 +163,9 @@ void setup() {  // setup() function required for Arduino
   state = 1;
   shooter.attach(servopin);
   shooter.write(0);
+  presser.attach(b_press_pin);
+  presser.write(180);
+  TMRArd_InitTimer(GAME_TIMER, 30000);
 }
 
 
@@ -166,24 +175,30 @@ void loop() {
   
   switch(state) {
     case(drivingbackwall):
+      //game_timer();
       drive_back_wall();
       LockedOnLED();
       break;
       
     case(findingsidewall):
+      //game_timer();
       find_side_wall();
       break;
       
     case(drivingsidewall):
+      //game_timer();
       drive_side_wall();
       break;
       
     case(findIR):
+      //game_timer();
       ScanningLED();
+      TMRArd_InitTimer(MAX_SEARCH_TIMER, 4000);
       FindIR();
       break;
       
     case(shooting):
+      game_timer();
       if(LockedOnLED() < 5){
         LockedOnLED; 
       }
@@ -193,6 +208,10 @@ void loop() {
       if (ShooterTimerExp()) {
         ChangeShooterPos();
       }
+     break;
+     
+    case(game_over):
+     drive_stop();
      break;   
   }
 }
@@ -319,7 +338,7 @@ void drive_back_wall(void) {
   
   driving_algo(distanceright, distanceleft);
   
-  if ( distanceleft <= 10 && distanceright <= 10 && abs(distanceleft - distanceright < 2)) {
+  if ( distanceleft <= 12 && distanceright <= 12 && abs(distanceleft - distanceright < 2)) {
     drive_brake();
     spin_right();
     TMRArd_InitTimer(minturntimer, 1600);
@@ -390,8 +409,8 @@ void drive_side_wall(void) {
   
   driving_algo(distanceright, distanceleft);
   
-  if ( distanceleft <= 10 && distanceright <= 10 ) {
-    while (distanceleft < 8 && distanceright < 8) {
+  if ( distanceleft <= 12 && distanceright <= 12 ) {
+    while (distanceleft < 9 && distanceright < 9) {
       drive_backward();
       if ((last_ping == last_ping_right) && TMRArd_IsTimerExpired(pingtimer)) {
         distanceleft = ultrasonicPing_left();
@@ -432,6 +451,7 @@ void ChangeShooterPos(void) {
   if (dir == 0) {
     pos += SHOOTER_STEP;
     shooter.write(pos);
+    presser.write(180 - pos);
     if (pos >= MAX_POS) {
       dir = 1;
     }
@@ -439,6 +459,7 @@ void ChangeShooterPos(void) {
   if (dir == 1) {
     pos -= SHOOTER_STEP;
     shooter.write(pos);
+    presser.write(180 - pos);
     if (pos <= 0) {
       dir = 0;
     }
@@ -525,11 +546,33 @@ void FindIR(void) {
     count = 0;
   }
   if (count>5) { //will return true once it has registered 5 consecutive highs
+    delay(150);
     drive_stop();
     TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
     OffLED();
     state = shooting;       
   }
+  if (TMRArd_IsTimerExpired(MAX_SEARCH_TIMER)  == TMRArd_EXPIRED) {
+    spin_reverse();
+    TMRArd_InitTimer(MAX_SEARCH_TIMER, 4000);
+  }
+}
+
+void spin_reverse(void) {
+  static unsigned char spin_dir = 0;
+  if (spin_dir == 0) {
+    spin_left();
+    spin_dir = 1;
+  } else {
+    spin_right();
+    spin_dir = 0;
+  }
+}
+
+void game_timer(void) {
+ if (TMRArd_IsTimerExpired(MAX_SEARCH_TIMER)  == TMRArd_EXPIRED) {
+   state = game_over;
+ }
 }
 
 
