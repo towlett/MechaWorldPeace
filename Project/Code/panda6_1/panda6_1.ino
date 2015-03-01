@@ -25,6 +25,7 @@
 #define findIR              4
 #define shooting            5
 #define game_over           6
+#define spray               7
 
 //MOTORS
 #define enable_pin_right    5
@@ -71,6 +72,9 @@
 #define RED_LED_TIMER       7
 #define MAX_SEARCH_TIMER    8
 #define GAME_TIMER          9
+#define SPRAY_TIMER         10
+
+#define ADDITIONAL_TURN_TIME 250
 
 /*---------------- Module Variables --------------------------*/
 //STATES
@@ -82,7 +86,6 @@ static unsigned char last_ping;
 //IR
 static unsigned long period_total;
 static unsigned long pulse_freq;
-static int count = 0;
 static unsigned int period_high;
 static unsigned int period_low;
 
@@ -104,6 +107,7 @@ void drive_back_wall(void);
 void find_side_wall(void);
 void drive_side_wall(void);
 void drive_brake_backup(void);
+void spin_right_fast(void);
 
 //SHOOTING
 unsigned char ShooterTimerExp(void);
@@ -165,7 +169,8 @@ void setup() {  // setup() function required for Arduino
   shooter.write(0);
   presser.attach(b_press_pin);
   presser.write(180);
-  TMRArd_InitTimer(GAME_TIMER, 30000);
+  TMRArd_InitTimer(GAME_TIMER, 125000);
+  TMRArd_InitTimer(SPRAY_TIMER, 60000);
 }
 
 
@@ -200,7 +205,7 @@ void loop() {
     case(shooting):
       game_timer();
       if(LockedOnLED() < 5){
-        LockedOnLED; 
+        LockedOnLED(); 
       }
       if (ShotClockExp()) {
         RespShotClock();
@@ -208,6 +213,62 @@ void loop() {
       if (ShooterTimerExp()) {
         ChangeShooterPos();
       }
+      if (TMRArd_IsTimerExpired(SPRAY_TIMER))
+      {
+        state = spray;
+      }
+     break;
+     
+     case(spray):
+       static unsigned char count = 0;
+       static unsigned char shotoccurred = 0;
+       static unsigned char startedspray = 0;
+       
+       game_timer();
+       
+//       if (startedspray == 0) {
+//         spin_right();
+//         delay(500);
+//         drive_stop();
+//         startedspray = 1;
+//       }
+
+       if ((count%10 == 0) && (shotoccurred == 0)) {
+         Serial.println("RIGHT");
+         spin_right();
+         delay(750);
+         drive_stop();
+         shotoccurred = 1;
+       } else if (shotoccurred == 0) {
+         Serial.println("LEFT");
+         spin_left();
+         delay(200);
+         drive_stop();
+         shotoccurred = 1;
+       }
+       
+//       if ((count%8 == 0) && (occurred == 0)) {
+//         spin_right();
+//         delay(400);
+//         drive_stop();
+//         occurred = 1;
+//       } else if ((count%4 == 0) && (occurred == 0)) {
+//         spin_left();
+//         delay(200);
+//         drive_stop();
+//         occurred = 1;
+//       }
+       
+       
+       if (ShotClockExp()) {
+         count++;
+         RespShotClock();
+         shotoccurred = 0;
+       }
+       if (ShooterTimerExp()) {
+        ChangeShooterPos();
+       }
+       
      break;
      
     case(game_over):
@@ -265,6 +326,13 @@ void drive_stop(void) {
 void spin_right(void) {
   digitalWrite(dir_pin_right, LOW);
   digitalWrite(dir_pin_left, HIGH);
+  analogWrite(enable_pin_right, 150);
+  analogWrite(enable_pin_left, 150);
+}
+
+void spin_right_fast(void) {
+  digitalWrite(dir_pin_right, LOW);
+  digitalWrite(dir_pin_left, HIGH);
   analogWrite(enable_pin_right, 175);
   analogWrite(enable_pin_left, 175);
 }
@@ -272,8 +340,8 @@ void spin_right(void) {
 void spin_left(void) {
   digitalWrite(dir_pin_right, HIGH);
   digitalWrite(dir_pin_left, LOW);
-  analogWrite(enable_pin_right, 175);
-  analogWrite(enable_pin_left, 175);
+  analogWrite(enable_pin_right, 150);
+  analogWrite(enable_pin_left, 150);
 }
 
 void swerve_right(void) {
@@ -340,7 +408,7 @@ void drive_back_wall(void) {
   
   if ( distanceleft <= 12 && distanceright <= 12 && abs(distanceleft - distanceright < 2)) {
     drive_brake();
-    spin_right();
+    spin_right_fast();
     TMRArd_InitTimer(minturntimer, 1600);
     TMRArd_InitTimer(maxturntimer, 4000);
     Serial.println("on to 2");
@@ -535,6 +603,7 @@ void OffLED(void){
 }
 
 void FindIR(void) {
+  static int count = 0;
   period_high = pulseIn(Beacon_Pin, HIGH);
   period_low = pulseIn(Beacon_Pin, LOW);
   period_total = period_high + period_low;
@@ -545,8 +614,8 @@ void FindIR(void) {
   else  {
     count = 0;
   }
-  if (count>5) { //will return true once it has registered 5 consecutive highs
-    delay(150);
+  if (count>2) { //will return true once it has registered 5 consecutive highs
+    delay(ADDITIONAL_TURN_TIME);
     drive_stop();
     TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
     OffLED();
@@ -570,8 +639,11 @@ void spin_reverse(void) {
 }
 
 void game_timer(void) {
- if (TMRArd_IsTimerExpired(MAX_SEARCH_TIMER)  == TMRArd_EXPIRED) {
+ if (TMRArd_IsTimerExpired(GAME_TIMER)  == TMRArd_EXPIRED) {
    state = game_over;
+   presser.write(180);
+   shooter.write(0);
+   OffLED();
  }
 }
 
