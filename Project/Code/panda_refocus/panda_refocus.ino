@@ -25,7 +25,7 @@
 #define findIR              4
 #define shooting            5
 #define game_over           6
-#define spraying            7
+#define resetting           7
 
 //MOTORS
 #define enable_pin_right    5
@@ -72,7 +72,8 @@
 #define RED_LED_TIMER       7
 #define MAX_SEARCH_TIMER    8
 #define GAME_TIMER          9
-#define SPRAY_TIMER         10
+#define RESET_TURN_TIMER    10
+#define TURN_TIMER          11
 
 #define ADDITIONAL_TURN_TIME 250
 
@@ -109,7 +110,7 @@ void drive_side_wall(void);
 void drive_brake_backup(void);
 void spin_right_fast(void);
 void shoot(void);
-void spray(void);
+void reset_turn(void);
 
 //SHOOTING
 unsigned char ShooterTimerExp(void);
@@ -172,7 +173,6 @@ void setup() {  // setup() function required for Arduino
   presser.attach(b_press_pin);
   presser.write(180);
   TMRArd_InitTimer(GAME_TIMER, 125000);
-  TMRArd_InitTimer(SPRAY_TIMER, 60000);
 }
 
 
@@ -200,7 +200,6 @@ void loop() {
     case(findIR):
       //game_timer();
       ScanningLED();
-      TMRArd_InitTimer(MAX_SEARCH_TIMER, 4000);
       FindIR();
       break;
       
@@ -208,8 +207,8 @@ void loop() {
       shoot();
       break;
      
-    case(spraying):
-      spray();        
+    case(resetting):
+      reset_turn();        
       break;
      
     case(game_over):
@@ -425,6 +424,7 @@ void drive_side_wall(void) {
     }
     drive_brake_backup();
     spin_right();
+    TMRArd_InitTimer(MAX_SEARCH_TIMER, 4000);
     state = findIR;
   }
 }
@@ -548,8 +548,9 @@ void FindIR(void) {
   if (count>2) { //will return true once it has registered 3 consecutive highs
     delay(ADDITIONAL_TURN_TIME);
     drive_stop();
-    TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
+    TMRArd_InitTimer(SHOT_CLOCK_TIMER, 10);
     OffLED();
+    TMRArd_InitTimer(RESET_TURN_TIMER, 45000);
     state = shooting;       
   }
   if (TMRArd_IsTimerExpired(MAX_SEARCH_TIMER)  == TMRArd_EXPIRED) {
@@ -589,39 +590,24 @@ void shoot(void) {
   if (ShooterTimerExp()) {
     ChangeShooterPos();
   }
-  if (TMRArd_IsTimerExpired(SPRAY_TIMER))
+  if (TMRArd_IsTimerExpired(RESET_TURN_TIMER))
   {
-    state = spraying;
+    state = resetting;
+    shooter.write(0);
+    presser.write(180);
+    spin_left();
+    TMRArd_InitTimer(TURN_TIMER, 1000);
   }
 }
 
-void spray(void) {
-   static unsigned char count = 0;
-   static unsigned char shotoccurred = 0;
-   static unsigned char startedspray = 0;
-   
-   game_timer();
-  
-   if ((count%10 == 0) && (shotoccurred == 0)) {
-     spin_right();
-     delay(800);
-     drive_stop();
-     shotoccurred = 1;
-   } else if (shotoccurred == 0) {
-     spin_left();
-     delay(200);
-     drive_stop();
-     shotoccurred = 1;
-   }
-   
-   if (ShotClockExp()) {
-     count++;
-     RespShotClock();
-     shotoccurred = 0;
-   }
-   if (ShooterTimerExp()) {
-    ChangeShooterPos();
-   }
+void reset_turn(void) {
+  game_timer();
+  if (TMRArd_IsTimerExpired(TURN_TIMER)) {
+    drive_stop();
+    spin_right();
+    TMRArd_InitTimer(RESET_TURN_TIMER, 45000);
+    state = findIR;
+  }
 }
 
 
