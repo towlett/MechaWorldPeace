@@ -550,7 +550,7 @@ void FindIR(void) {
     drive_stop();
     TMRArd_InitTimer(SHOT_CLOCK_TIMER, 10);
     OffLED();
-    TMRArd_InitTimer(RESET_TURN_TIMER, 45000);
+    TMRArd_InitTimer(RESET_TURN_TIMER, 30000);
     state = shooting;       
   }
   if (TMRArd_IsTimerExpired(MAX_SEARCH_TIMER)  == TMRArd_EXPIRED) {
@@ -605,6 +605,7 @@ void reset_turn(void) {
   if (TMRArd_IsTimerExpired(TURN_TIMER)) {
     drive_stop();
     spin_right();
+    TMRArd_InitTimer(MAX_SEARCH_TIMER, 4000);
     TMRArd_InitTimer(RESET_TURN_TIMER, 45000);
     state = findIR;
   }
