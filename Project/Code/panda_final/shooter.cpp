@@ -7,6 +7,7 @@
 #include <Servo.h>
 
 #include "defines.h"
+#include "driving_algos.h"
 #include "drive.h"
 #include "shooter.h"
 #include "state_machine.h"
@@ -36,7 +37,6 @@ unsigned char ShotClockExp(void) {
 }
 
 void RespShotClock(void) {
-  TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
   ChangeShooterPos();
 }
 
@@ -44,6 +44,10 @@ void ChangeShooterPos(void) {
   static int pos = 0;
   static unsigned char dir = 0;
   TMRArd_ClearTimerExpired(SHOOTER_TIMER);
+
+  if (pos <= 0 && dir == 0) {
+    TMRArd_InitTimer(SHOT_CLOCK_TIMER, 3000);
+  }
   
   if (dir == 0) {
     pos += SHOOTER_STEP;
@@ -82,7 +86,7 @@ void shoot(void) {
     set_state(resetting);
     shooter.write(0);
     presser.write(180);
-    spin_left();
+    spin_left_fast();
     TMRArd_InitTimer(TURN_TIMER, 1000);
   }
 }
@@ -92,6 +96,7 @@ void reset_turn(void) {
   if (TMRArd_IsTimerExpired(TURN_TIMER)) {
     drive_stop();
     spin_right();
+    reset_p_count();
     TMRArd_InitTimer(MAX_SEARCH_TIMER, 4000);
     TMRArd_InitTimer(RESET_TURN_TIMER, 45000);
     set_state(findIR);

@@ -37,6 +37,7 @@ void initialize_pins(void) {
   
   drive_forward();
   pinMode(Beacon_Pin, INPUT);
+  Serial.begin(9600);
   
   TMRArd_InitTimer(GAME_TIMER, 125000);
   init_shooter();

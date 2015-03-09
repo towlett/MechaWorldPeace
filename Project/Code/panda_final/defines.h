@@ -34,7 +34,7 @@
 #define servopin            10
 #define MAX_POS             160
 #define SHOOTER_STEP        1
-#define SHOOTER_DELAY       10 
+#define SHOOTER_DELAY       6 
 #define SHOOTER_TIMER       0
 #define SHOT_CLOCK_TIMER    1
 #define b_press_pin         3
@@ -61,4 +61,4 @@
 #define RESET_TURN_TIMER    10
 #define TURN_TIMER          11
 
-#define ADDITIONAL_TURN_TIME 250
+#define ADDITIONAL_TURN_TIME 300

@@ -19,5 +19,6 @@ unsigned int ultrasonicPing_right(void);
 //IR Finding
 void FindIR(void);
 void spin_reverse(void);
+void reset_p_count(void);
 
 #endif

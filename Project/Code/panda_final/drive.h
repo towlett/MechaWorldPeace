@@ -17,5 +17,6 @@ void swerve_right(void);
 void drive_brake(void);
 void drive_brake_backup(void);
 void spin_right_fast(void);
+void spin_left_fast(void);\
 
 #endif

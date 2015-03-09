@@ -16,7 +16,6 @@
 
 //ULTRASOUND
 static unsigned char last_ping;
-
 static NewPing left_ping(trigPinleft, echoPinleft, 150);
 static NewPing right_ping(trigPinright, echoPinright, 150);
 
@@ -25,6 +24,8 @@ static unsigned long period_total;
 static unsigned long pulse_freq;
 static unsigned int period_high;
 static unsigned int period_low;
+
+static int p_count = 0;
 
 //ULTRASONIC
 unsigned int ultrasonicPing_right(void) {
@@ -135,6 +136,12 @@ void drive_side_wall(void) {
     TMRArd_InitTimer(pingtimer, 50);
     last_ping = last_ping_right;
   }
+
+  Serial.print("Distanceleft: ");
+  Serial.println(distanceleft);
+  Serial.print("Distanceright: ");
+  Serial.println(distanceright);
+
   
   driving_algo(distanceright, distanceleft);
   
@@ -160,18 +167,17 @@ void drive_side_wall(void) {
 }
 
 void FindIR(void) {
-  static int count = 0;
   period_high = pulseIn(Beacon_Pin, HIGH);
   period_low = pulseIn(Beacon_Pin, LOW);
   period_total = period_high + period_low;
   pulse_freq = 1000000/period_total;
   if (pulse_freq>750 && pulse_freq<950) {
-    count++;
+    p_count++;
   }
   else  {
-    count = 0;
+    p_count = 0;
   }
-  if (count>2) { //will return true once it has registered 3 consecutive highs
+  if (p_count>2) { //will return true once it has registered 3 consecutive highs
     delay(ADDITIONAL_TURN_TIME);
     drive_stop();
     TMRArd_InitTimer(SHOT_CLOCK_TIMER, 10);
@@ -194,4 +200,8 @@ void spin_reverse(void) {
     spin_right();
     spin_dir = 0;
   }
+}
+
+void reset_p_count(void) {
+  p_count = 0;
 }

@@ -43,6 +43,13 @@ void spin_right_fast(void) {
   analogWrite(enable_pin_left, 175);
 }
 
+void spin_left_fast(void) {
+  digitalWrite(dir_pin_right, HIGH);
+  digitalWrite(dir_pin_left, LOW);
+  analogWrite(enable_pin_right, 200);
+  analogWrite(enable_pin_left, 200);
+}
+
 void spin_left(void) {
   digitalWrite(dir_pin_right, HIGH);
   digitalWrite(dir_pin_left, LOW);
